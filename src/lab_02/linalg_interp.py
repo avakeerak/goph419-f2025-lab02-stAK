@@ -60,7 +60,7 @@ def forward_substitution(L, b):
     L : array_like
         Lower triangular matrix, size = (n, n)
     b : array_like
-        Right-hand side(s), size = (, n) or (n, m)
+        Right-hand side(s), size = (n ,) or (n, m)
         where m is the number of right-hand sides.
     Returns
     -------
@@ -73,5 +73,26 @@ def forward_substitution(L, b):
         # state in documentation that we are assuming that the system is lower traingular; therefore
         # we do not need to check
 
-    L = np.array(L)
-    b = np.array(b)
+    L = np.array(L, dtype=float)
+    b = np.array(b, dtype=float)
+
+    # check shape of coef matrix (2d nxn) and  b
+
+    L_shape = L.shape
+    if not len(L_shape) == 2:
+            raise ValueError(f"Coefficient matrix L has shape {L_shape} and length is {len(L_shape)}, length must be 2")
+
+    n = L_shape[0]
+    if n != L_shape[1]:
+        raise ValueError(f"Coefficient matrix has shape {L_shape}, shape must be square")
+
+    b_shape = b.shape
+    if not (len(b_shape) == 1 or len(b_shape) == 2):
+        raise ValueError(f"Right-hand side vector b has shape {b_shape} and length is {len(b_shape)}, length must be 1 or 2")
+
+    if n != b_shape[0]:
+        raise ValueError(f"Coefficient matrix L has {n} rows and columns, right-hand side vector b has {b_shape[0]} rows, number of rows must match")
+
+    
+
+    return np.zeros_like(b)  
