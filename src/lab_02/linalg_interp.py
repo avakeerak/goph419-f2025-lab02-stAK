@@ -93,6 +93,10 @@ def forward_substitution(L, b):
     if n != b_shape[0]:
         raise ValueError(f"Coefficient matrix L has {n} rows and columns, right-hand side vector b has {b_shape[0]} rows, number of rows must match")
 
-    
+    if len(b_shape) == 1:
+        b = np.reshape(b, (n, 1))
 
-    return np.zeros_like(b)  
+    # form the augmented matrix
+    aug = np.hstack([L, b])
+
+    return np.reshape(aug[::, n], shape=b_shape)
