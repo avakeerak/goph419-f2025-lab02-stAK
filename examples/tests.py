@@ -1,4 +1,5 @@
 import numpy as np
+from lab_02.linalg_interp import forward_substitution()
 
 def main():
     test_forward_substitution()
@@ -24,6 +25,11 @@ def test_forward_substitution():
 
     x_exp = np.linalg.solve(A, b)
     print(f"x expected = {x_exp}")
+    print(f"expected shape: {x_exp.shape}")
+
+    x_act = forward_substitution(A, b)
+    print(f"x actual = {x_act}")
+    print(f"actual shape: {x_act.shape}")
 
 if __name__ == "__main__": #
     main()
