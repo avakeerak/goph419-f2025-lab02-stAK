@@ -1,1 +1,4 @@
-# goph419-f2025-lab02-stAK
+# GOPH 419 – Computational Methods for Geophysicists
+*Semester:* F2025
+*Instructor:* B. Karchewski
+*Author:* <Ava Keerak>
