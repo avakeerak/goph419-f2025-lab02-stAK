@@ -1,55 +1,132 @@
 
-def gauss_iter_solve(A, b, x0=None, tol=1e-10, alg='jacobi'):
+import numpy as np
+import warnings
+
+def gauss_iter_solve(A, b, x0=None, tol=1e-8, alg='seidel'):
     """
-    Solve the linear system Ax = b using iterative methods: Jacobi or Gauss-Seidel.
+    Solve Ax = b using Gauss-Seidel or Jacobi iterative methods.
 
-    Parameters:
-    A : 2D array-like
-        Coefficient matrix.
-    b : 1D array-like
-        Right-hand side vector.
-    x0 : 1D array-like, optional
-        Initial guess for the solution. If None, a zero vector is used.
-    tol : float, optional
-        Tolerance for convergence. Default is 1e-10.
-    alg : str, optional
-        Algorithm to use: 'jacobi' or 'gauss-seidel'. Default is 'jacobi'.
+    Parameters
+    ----------
+    A : array_like
+        Coefficient matrix (n x n).
+    b : array_like
+        RHS vector (n,) or matrix (n, m).
+    x0 : array_like or None
+        Initial guess (same shape as b) or (n,1) to be repeated.
+    tol : float
+        Relative error tolerance for convergence.
+    alg : str
+        the algorithm to be used, defaults to Gauss-Seidel Method if 'jacobi' is not specified.
 
-    Returns:
-    x : 1D array
-        Approximate solution vector.
+    Returns
+    -------
+    numpy.ndarray
+        Solution array with same shape as b.
     """
-    import numpy as np
 
+    # Convert inputs to arrays
     A = np.array(A, dtype=float)
     b = np.array(b, dtype=float)
-    n = len(b)
 
+    # -----------------------
+    # Shape / validity checks
+    # -----------------------
+    A_shape = A.shape
+    if len(A_shape) != 2:
+        raise ValueError(f"Coefficient matrix A has shape {A_shape}, must be 2D")
+
+    n = A_shape[0]
+    if n != A_shape[1]:
+        raise ValueError(f"Coefficient matrix A must be square, got {A_shape}")
+
+    b_shape = b.shape
+    if len(b_shape) not in {1, 2}:
+        raise ValueError("b must be 1D or 2D array")
+
+    if b_shape[0] != n:
+        raise ValueError(f"A has {n} rows but b has {b_shape[0]} rows")
+
+    if len(b_shape) == 1:
+        b = np.reshape(b, (n, 1))  
+
+    m = b_shape[1]      # number of RHS
+
+    alg_flag = alg.strip().lower()
+    if alg_flag not in ("seidel", "jacobi"):
+        raise ValueError("alg must be either 'seidel' or 'jacobi'.")
+
+    # --------------------------------------
+    # Handle initial guess x0 (None or array)
+    # --------------------------------------
     if x0 is None:
-        x0 = np.zeros(n)
+        x = np.zeros_like(b, dtype=float)
+    else:
+        x0 = np.array(x0, dtype=float)
 
-    x = np.copy(x0)
-    max_iterations = 10000
+        if len(x0.shape) not in {1, 2}:
+            raise ValueError("x0 must be 1D or 2D")
 
-    for iteration in range(max_iterations):
-        x_new = np.copy(x)
+        if x0.shape[0] != n:
+            raise ValueError("x0 must have same number of rows as A and b")
 
-        for i in range(n):
-            sum_ax = np.dot(A[i, :], x_new) - A[i, i] * x_new[i]
-            if alg == 'jacobi':
-                x_new[i] = (b[i] - sum_ax) / A[i, i]
-            elif alg == 'gauss-seidel':
-                x_new[i] = (b[i] - sum_ax) / A[i, i]
+        if x0.ndim == 1:
+            x = x0.reshape(n, 1).repeat(m, axis=1)
+        else:  # 2D
+            if x0.shape == (n, m):
+                x = x0.copy()
+            elif x0.shape == (n, 1):
+                x = x0.repeat(m, axis=1)
             else:
-                raise ValueError("Algorithm must be 'jacobi' or 'gauss-seidel'.")
+                raise ValueError("x0 shape incompatible with b")
 
-        # Check for convergence
-        if np.linalg.norm(x_new - x, ord=np.inf) < tol:
-            return x_new
 
-        x = x_new
+    # Precompute diagonal
+    diagA = np.diag(A)
+    if np.any(diagA == 0):
+        raise ValueError("Zero diagonal entry in A — cannot iterate")
 
-    raise ValueError("Maximum iterations reached without convergence.")
+    LU = A - np.diagflat(D)
+
+    max_iter = 50_000
+    iteration = 0
+
+    # for Jacobi (x_new depends on previous x only)
+    x_old = x.copy()
+
+    # ==========================
+    #      ITERATIVE LOOP
+    # ==========================
+    for k in range(max_iter):
+        x_old = x.copy()
+
+        if use_jacobi:
+            # Jacobi: use old x everywhere
+            x = (b - LplusU @ x_old) / D[:, None]
+
+        else:
+            # Gauss–Seidel: update in-place using newest values
+            for i in range(n):
+                # Compute A[i,:]·x skipping diagonal term
+                row_sum = A[i, :i] @ x[:i] + A[i, i+1:] @ x_old[i+1:]
+                x[i] = (b[i] - row_sum) / A[i, i]
+
+        # ---------------------
+        # Check convergence
+        # ---------------------
+        rel_err = np.linalg.norm(x - x_old) / (np.linalg.norm(x) + 1e-14)
+        if rel_err < tol:
+            return x
+
+        if iteration >= max_iter:
+            warnings.warn("Gauss-Seidel/Jacobi did not converge", RuntimeWarning)
+            break
+
+    # match user’s b shape
+    if len(b_shape) == 1:
+        return x.reshape(b_shape)
+
+    return x
 
 def forward_substitution(L, b):
     """ Solve a system Lx = b where L is a lower triangular coefficient matrix
@@ -98,5 +175,10 @@ def forward_substitution(L, b):
 
     # form the augmented matrix
     aug = np.hstack([L, b])
+
+    for k, row in enumerate(L): # loop for every row in L matrix
+        aug[k, n:] = (aug[k, n:] - L[k : k + 1, :k] @ aug[:k, n:]) / row[k]  
+    
+
 
     return np.reshape(aug[::, n], shape=b_shape)
