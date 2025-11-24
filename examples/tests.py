@@ -1,9 +1,7 @@
 import numpy as np
 
 from lab_02.linalg_interp import (gauss_iter_solve, spline_function)
-# -------------------------------------------------------------------
-# 1. Test gauss_iter_solve with a single RHS
-# -------------------------------------------------------------------
+
 def test_single_rhs():
     A = np.array([[4, 1, 0],
                   [1, 3, 1],
@@ -28,10 +26,6 @@ def test_single_rhs():
     assert np.allclose(x_gs.flatten(), x_true, atol=1e-6)
     assert np.allclose(x_jac.flatten(), x_true, atol=1e-6)
 
-
-# -------------------------------------------------------------------
-# 2. Test gauss_iter_solve with multiple RHS columns (inverse test)
-# -------------------------------------------------------------------
 def test_inverse_computation():
     A = np.array([[4, 1, 2],
                   [1, 3, 1],
@@ -60,16 +54,12 @@ def test_inverse_computation():
 
 from scipy.interpolate import UnivariateSpline
 
-# -------------------------
-# Helper generators
-# -------------------------
+
 def midpoints(x):
     """Return midpoints between consecutive entries of x."""
     return 0.5 * (x[:-1] + x[1:])
 
-# -------------------------
-# 1) Exact recovery tests
-# -------------------------
+
 def test_linear_quadratic_cubic_exact_recovery():
     x = np.linspace(0, 10, 25)      # knots
     x_dense = np.linspace(x[0], x[-1], 1000)   # dense grid for exact-match checks
